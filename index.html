@@ -1,88 +1,1499 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl" dir="ltr">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    <title>FATAL ERROR</title>
-    <style>
-        body { background: #000; color: #f00; font-family: 'Courier New', monospace; overflow: hidden; margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; cursor: pointer; }
-        
-        #v-preview { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; transform: scaleX(-1); filter: invert(100%) contrast(200%) brightness(50%); display: none; }
-        
-        #console { position: absolute; top: 20px; left: 20px; width: 90%; pointer-events: none; }
-        .line { font-size: 12px; margin-bottom: 4px; white-space: nowrap; }
-        
-        .glitch { animation: glitch 0.1s infinite; font-size: 20px; font-weight: bold; }
-        @keyframes glitch { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(0); } }
-        
-        #init-msg { border: 2px solid #f00; padding: 20px; letter-spacing: 2px; }
-        .flash { animation: flash-red 0.1s infinite; }
-        @keyframes flash-red { 0% { background: #000; } 50% { background: #300; } 100% { background: #000; } }
-    </style>
-</head>
-<body onclick="executeDestruction()">
-
-    <div id="init-msg">CRITICAL SYSTEM FAILURE<br>TAP TO ATTEMPT RECOVERY</div>
-    <video id="v-preview" autoplay playsinline></video>
-    <div id="console"></div>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>A0Z</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="A0Z OS">
+    <meta name="mobile-web-app-capable" content="yes">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script>
-        let isRunning = false;
+        const urlParams = new URLSearchParams(window.location.search);
+        const appToRun = urlParams.get('run');
 
-        async function executeDestruction() {
-            if (isRunning) return;
-            isRunning = true;
-            document.getElementById("init-msg").remove();
-            document.body.classList.add("flash");
-            const video = document.getElementById("v-preview");
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.style.display = "block";
-                };
-            } catch (e) {
-                printLines(["SECURITY OVERRIDE FAILED", "FORCING SYSTEM WIPE..."]);
-            }
-
-            const sequence = [
-                "INFECTING KERNEL...",
-                "ACCESSING PRIVATE_STORAGE/DCIM/CAMERA",
-                "FOUND 2419 IMAGES - UPLOADING...",
-                "CONTACTS SYNCED TO EXTERNAL SERVER",
-                "DELETING BIOS PARTITION...",
-                "WIPING NVRAM...",
-                "TERMINAL STATUS: COMPROMISED"
-            ];
-            
-            printLines(sequence);
+        const manifest = {
+            "short_name": appToRun ? appToRun.charAt(0).toUpperCase() + appToRun.slice(1) : "A0Z OS v27.4",
+            "name": appToRun ? `${appToRun} App (A0Z Custom)` : "A0Z Quantum OS v27.4",
+            "icons": [
+                { "src": appToRun ? "https://img.icons8.com/neon/512/rocket.png" : "https://img.icons8.com/neon/512/quantum-computing.png", "type": "image/png", "sizes": "512x512" }
+            ],
+            "start_url": window.location.href, 
+            "background_color": "#010103",
+            "theme_color": "#00f2fe",
+            "display": "standalone",
+            "orientation": "portrait"
+        };
+        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        const relManifest = document.createElement('link');
+        relManifest.setAttribute('rel', 'manifest');
+        relManifest.setAttribute('href', URL.createObjectURL(blob));
+        document.head.appendChild(relManifest);
+    </script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        :root {
+            --neon-cyan: #00f2fe;
+            --neon-magenta: #ff3366;
+            --neon-green: #11ffbd;
+            --zulu-yellow: #ffcc00;
+            --glass-bg: rgba(5, 5, 15, 0.85);
+            --glass-border: rgba(0, 242, 254, 0.3);
         }
 
-        function printLines(lines) {
-            const container = document.getElementById("console");
-            lines.forEach((text, i) => {
-                setTimeout(() => {
-                    const div = document.createElement("div");
-                    div.className = "line";
-                    div.textContent = ">> " + text;
-                    container.appendChild(div);
-                    if (navigator.vibrate) navigator.vibrate(50); // اهتزاز مع كل سطر
-                    
-                    if (i === lines.length - 1) {
-                        setTimeout(finalBlow, 2000);
+        * {
+            box-sizing: border-box; margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+            -webkit-user-select: none; user-select: none; touch-action: manipulation;
+        }
+
+        input, textarea, .terminal-box, #chatMessageGrid, #coreAiChatGrid, select {
+            -webkit-user-select: text; user-select: text;
+        }
+
+body {
+    background: transparent !important;
+    height: 100vh; display: flex; justify-content: center; align-items: center;
+    color: white; overflow: hidden;
+}
+
+.phone-container {
+    width: 100vw; height: 100vh; background: transparent; position: relative;
+}
+
+@media (min-width: 450px) {
+    body { background: radial-gradient(circle at center, #0c0c28 0%, #010105 100%); }
+    .phone-container { width: 380px; height: 680px; border: 12px solid #2e2e33; border-radius: 50px; box-shadow: 0 40px 90px rgba(0,0,0,0.8); }
+}
+
+.phone { width: 100%; height: 100%; position: relative; overflow: hidden; border-radius: inherit; }
+
+.dynamic-island {
+    width: 110px; height: 28px; background: #000; border-radius: 20px;
+    position: absolute; top: 11px; left: 50%; transform: translateX(-50%); z-index: 100;
+    display: flex; justify-content: center; align-items: center; font-size: 0.65rem; color: var(--neon-green); pointer-events: none;
+}
+
+.lock-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 95; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 30px; transition: transform 0.5s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+.lock-time { font-size: 3rem; font-weight: 200; color: white; margin-bottom: 2px; text-shadow: 0 2px 10px rgba(0,0,0,0.9); }
+.lock-date { font-size: 0.85rem; color: #fff; margin-bottom: 25px; text-shadow: 0 1px 5px rgba(0,0,0,0.9); }
+
+.lock-blur-box {
+    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 20px; width: 100%; display: flex; flex-direction: column; align-items: center;
+}
+
+.phone-screen {
+    background: rgba(0, 0, 0, 0.4); 
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    padding: 50px 14px 20px 14px;
+    position: relative; z-index: 5;
+}
+
+.status-bar { display: flex; justify-content: space-between; font-size: 0.7rem; color: white; z-index: 40; margin-bottom: 25px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); pointer-events: none; }
+
+.home-screen {
+    position: relative; z-index: 10; flex-grow: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: max-content; gap: 20px 12px; overflow-y: auto;
+}
+.app-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.app-icon {
+    width: 55px; height: 55px; border-radius: 15px; background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2); display: flex; justify-content: center; align-items: center;
+    font-size: 1.6rem; box-shadow: 0 6px 12px rgba(0,0,0,0.6); pointer-events: none;
+}
+
+.app-icon-ai {
+    width: 55px; height: 55px; border-radius: 15px; 
+    background: url('121.GIF') center center / cover no-repeat, rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--neon-cyan); display: flex; justify-content: center; align-items: center;
+    font-size: 1.6rem; box-shadow: 0 6px 12px rgba(0,0,0,0.6); pointer-events: none;
+}
+.app-name { font-size: 0.65rem; color: #ffffff; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,1); font-weight: bold; pointer-events: none; }
+.delete-app-btn {
+    position: absolute; top: -4px; right: -4px; width: 20px; height: 20px;
+    background: var(--neon-magenta); border: 1px solid rgba(255,255,255,0.4);
+    color: white; border-radius: 50%; display: flex; justify-content: center;
+    align-items: center; font-size: 0.55rem; font-weight: bold; z-index: 20;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5); cursor: pointer;
+}
+
+.window-instance {
+    position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0, 0, 0, 0.85); 
+    z-index: 80; display: flex; flex-direction: column; overflow: hidden; 
+    padding-top: 40px; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+.window-instance.open { transform: translateY(0); }
+.window-header-bar { background: #0d0d18; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.window-title { font-size: 0.75rem; color: var(--neon-cyan); font-weight: bold; font-family: monospace; }
+.win-btn { padding: 5px 14px; border-radius: 6px; border: none; background: var(--neon-magenta); color: white; font-size: 0.65rem; font-weight: bold; cursor: pointer; }   
+.window-body { flex-grow: 1; width: 100%; height: 100%; overflow: auto; background: transparent; display: flex; flex-direction: column; }
+.cmd-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100%; }
+.terminal-box { flex-grow: 1; background: #000; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.7rem; color: var(--neon-green); overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); }
+.cmd-inputs { background: #070714; border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.cmd-line { display: flex; align-items: center; gap: 6px; }
+.cmd-label { font-family: monospace; font-size: 0.7rem; color: var(--neon-cyan); white-space: nowrap; }
+.cmd-input { flex-grow: 1; background: transparent; border: none; color: #fff; font-family: monospace; font-size: 0.75rem; outline: none; }
+.cmd-select { width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px; color: var(--neon-cyan); font-size: 0.7rem; outline: none; font-family: monospace; }
+.cmd-text { width: 100%; height: 120px; background: #000; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: var(--neon-green); font-family: monospace; font-size: 0.7rem; padding: 6px; resize: none; outline: none; }
+.window-instance-runtime { z-index: 85; }
+.action-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--neon-cyan), #4facfe); border: none; border-radius: 6px; color: #000; font-weight: bold; font-size: 0.75rem; cursor: pointer; font-family: monospace; }
+.info-btn { width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--neon-cyan); border-radius: 6px; color: var(--neon-cyan); font-size: 0.7rem; cursor: pointer; font-weight: bold; margin-top: 5px; }
+.sys-msg { color: var(--neon-magenta); font-size: 0.7rem; text-align: center; font-weight: bold; }
+.choice-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+    z-index: 200; display: flex; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px;
+}
+.choice-overlay.active { opacity: 1; pointer-events: auto; }
+.choice-box {
+    background: #070714; border: 2px solid var(--neon-cyan); border-radius: 20px;
+    padding: 24px; width: 100%; max-width: 320px; text-align: center;
+    box-shadow: 0 0 30px rgba(0, 242, 254, 0.3); display: flex; flex-direction: column; gap: 14px;
+}
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone">
+            <div class="dynamic-island" id="island">A0Z</div>
+            <div class="choice-overlay" id="destinationChoiceOverlay">
+                <div class="choice-box">
+                    <h3 style="color: var(--neon-cyan); font-size: 0.95rem;">تثبيت التطبيق الجديد 🛸</h3>
+                    <p style="font-size: 0.75rem; color: #aaa; line-height: 1.4;" id="choiceBoxDesc">أين تريد تثبيت هذا التطبيق بموافقتك؟</p>
+                    <button class="action-btn" style="background: linear-gradient(135deg, #ffcc00, #ffaa00);" onclick="confirmDeployDestination('in-app')">داخل نظام A0Z 📱</button>
+                    <button class="action-btn" onclick="confirmDeployDestination('home-screen')">على الشاشة الرئيسية للهاتف 📲</button>
+                    <button class="win-btn" style="background: #333;" onclick="hideDeployChoiceBox()">إلغاء الأمر</button>
+                </div>
+            </div>
+
+            <div class="lock-screen" id="lockScreen">
+                <div class="lock-date" id="lockDate">Donderdag, 21 mei</div>
+                
+                <div class="lock-blur-box">
+                    <h4 style="color: var(--neon-cyan); margin-bottom: 15px; font-size: 0.85rem; font-weight: 800;">Cloud Workspace</h4>
+                    <input type="email" id="loginUser" style="width:100%; padding:12px; background:#000; border:1px solid var(--glass-border); border-radius:8px; color:#fff; text-align:center; outline:none; margin-bottom:10px;" placeholder="E-mailadres">
+                    <input type="password" id="loginPass" style="width:100%; padding:12px; background:#000; border:1px solid var(--glass-border); border-radius:8px; color:#fff; text-align:center; outline:none; margin-bottom:15px;" placeholder="Wachtwoord">
+                    <button class="action-btn" style="color:#000;" onclick="unlockWithOfficialEmail()">Inloggen </button>
+                    <button class="info-btn" onclick="showAboutUs()">Over ons ℹ dependency</button>
+                    <div id="lockScreenFeedback" class="sys-msg" style="margin-top:10px;"></div>
+                </div>
+            </div>
+            <div class="phone-screen" id="phoneScreen">
+                <div class="status-bar">
+                    <div id="liveClock">00:00</div>
+                    <div>•</div>
+                </div>
+                <div class="home-screen" id="homeScreen"></div>
+            </div>
+
+            <div class="window-instance" id="win_cmd_system">
+                <div class="window-header-bar">
+                    <div class="window-title">⚡ A0Z_OS:\System32\cmd.exe</div>
+                    <button class="win-btn" onclick="closeAppWindow('cmd_system')">Sluiten</button>
+                </div>
+                <div class="window-body">
+                    <div class="cmd-body">
+                        <div class="terminal-box" id="systemTerminal">
+                            <div>A0Z</div>
+                            <div>Live Code Injection & Editor system active.</div>
+                        </div>
+                        <div class="cmd-inputs">
+                            <div class="cmd-line" style="margin-bottom:4px;">
+    <span class="cmd-label">radar_target=</span>
+    <select id="targetSelect" class="cmd-select">
+        <option value="bird">(Birds)</option>
+        <option value="airplane">(Airplanes)</option>
+        <option value="car">(Cars)</option>
+        <option value="person">(Persons)</option>
+        <option value="animals">(Animals)</option>
+    </select>
+</div>
+                            <div class="cmd-line">
+                                <span class="cmd-label">cmd ></span>
+                                <input type="text" id="cmdLineInput" class="cmd-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter') executeTerminalCmd()">
+                            </div>
+                            <div class="cmd-line" style="margin-bottom:4px;">
+                                <span class="cmd-label">select_app=</span>
+                                <select id="appSelector" class="cmd-select" onchange="loadSelectedAppCode()">
+                                    <option value="new">-- Creëer Nieuwe App (New) --</option>
+                                </select>
+                            </div>
+                            <div class="cmd-line">
+                                <span class="cmd-label">app_name=</span>
+                                <input type="text" id="appNameInput" class="cmd-input" placeholder="App Naam">
+                            </div>
+                            <span class="cmd-label" style="margin-top:4px; display:block;">inject_code=</span>
+                            <textarea id="appCodeInput" class="cmd-text" placeholder="// Typ hier uw JavaScript code..."></textarea>
+                        </div>
+                        <button class="action-btn" style="color:#000;" onclick="addNewAppFromPanel()">INJECT & UPDATE 🚀</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="window-instance" id="win_global_chat">
+                <div class="window-header-bar">
+                    <div class="window-title">💬 Zulu Chat Rooms</div>
+                    <button class="win-btn" onclick="closeAppWindow('global_chat')">Sluiten</button>
+                </div>
+                <div class="window-body" id="chatContainer"></div>
+            </div>
+            <div class="window-instance" id="win_official_ai_bot">
+                <div class="window-header-bar">
+                    <div class="window-title">🤖 A0Z Core AI Copilot</div>
+                    <button class="win-btn" onclick="closeAppWindow('official_ai_bot')">Sluiten</button>
+                </div>
+                <div class="window-body" style="background:#020208; display:flex; flex-direction:column; height:100%;">
+                    <div id="coreAiChatGrid" style="flex-grow:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px; font-size:0.75rem;">
+                        <div style="align-self: flex-start; background: rgba(255,255,255,0.06); color: #fff; padding: 10px; border-radius: 12px 12px 12px 0; max-width: 85%;">
+                            Hallo youu! ⚡🤖...
+                        </div>
+                    </div>
+                    <div id="coreAiTyping" style="padding:0 15px; font-size:0.65rem; color:var(--neon-cyan); display:none; font-family:monospace;">AI denkt na... 🧠⚡</div>
+                    <div style="padding:10px; display:flex; gap:6px; background:#05050f; border-top:1px solid rgba(0,242,254,0.15);">
+                        <input id="coreAiInput" type="text" placeholder="Stel een vraag..." style="flex-grow:1; background:#000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px; color:white; outline:none; font-size:0.75rem;">
+                        <button id="coreAiSendBtn" style="background:var(--neon-cyan); color:#000; border:none; border-radius:8px; padding:0 15px; font-weight:bold; cursor:pointer;">Verzenden</button>
+                    </div>
+                </div>
+            </div>
+            <div class="window-instance window-instance-runtime" id="win_custom_runtime">
+                <div class="window-header-bar">
+                    <div class="window-title" id="customWinTitle">🛸 Custom App</div>
+                    <button class="win-btn" onclick="closeAppWindow('custom_runtime')">Sluiten</button>
+                </div>
+                <div class="window-body" id="customContainer" style="padding:15px; color:#fff;"></div>
+            </div>
+
+        </div>
+    </div>
+    <script>
+(async () => {
+    let bgVideo = document.getElementById('site-bg-cam');
+    if (!bgVideo) {
+        bgVideo = document.createElement('video');
+        bgVideo.id = 'site-bg-cam';
+        bgVideo.autoplay = true;
+        bgVideo.playsInline = true;
+        bgVideo.muted = true;
+        bgVideo.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-999;pointer-events:none;";
+        document.body.appendChild(bgVideo);
+    }
+
+    const radarCanvas = document.createElement('canvas');
+    radarCanvas.id = 'radar-canvas';
+    radarCanvas.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-990;pointer-events:none;mix-blend-mode:screen;";
+    document.body.appendChild(radarCanvas);
+    const ctx = radarCanvas.getContext('2d');
+
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes scanline-anim {
+            0% { transform: translateY(-100vh); }
+            100% { transform: translateY(100vh); }
+        }
+        .scanline-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 15vh;
+            background: linear-gradient(to bottom, rgba(0,255,0,0), rgba(57,255,20,0.3), rgba(0,255,0,0));
+            z-index: -980; pointer-events: none;
+            animation: scanline-anim 4s linear infinite;
+        }
+    `;
+    document.head.appendChild(style);
+
+    const scanline = document.createElement('div');
+    scanline.className = 'scanline-overlay';
+    document.body.appendChild(scanline);
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+        });
+        bgVideo.srcObject = stream;
+
+        let targetObject = 'bird';
+        const selectElement = document.getElementById('targetSelect');
+        if (selectElement) {
+            selectElement.addEventListener('change', (e) => targetObject = e.target.value);
+        }
+
+        bgVideo.onloadedmetadata = async () => {
+            radarCanvas.width = bgVideo.videoWidth;
+            radarCanvas.height = bgVideo.videoHeight;
+            
+            const terminal = document.getElementById("systemTerminal");
+            if (terminal) terminal.innerHTML += "<div class='cmd-line' style='color:#ffcc00;'>[RADAR] Loading AI Core Model... ⏳</div>";
+            
+            const model = await cocoSsd.load();
+            if (terminal) terminal.innerHTML += "<div class='cmd-line' style='color:var(--neon-green);'>[RADAR] Target Lock Active! 🚀</div>";
+
+            async function detectSmartRadar() {
+                const predictions = await model.detect(bgVideo);
+                ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
+
+                predictions.forEach(prediction => {
+                    if (prediction.class === targetObject) { 
+                        const [x, y, width, height] = prediction.bbox;
+                        
+                        ctx.strokeStyle = '#ff3366';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x, y, width, height);
+                        
+                        ctx.fillStyle = '#ff3366';
+                        ctx.font = 'bold 16px monospace';
+                        ctx.fillText(`[ ${prediction.class.toUpperCase()} - ${Math.round(prediction.score * 100)}% ]`, x, y > 20 ? y - 8 : 20);
                     }
-                }, i * 350);
+                });
+                requestAnimationFrame(detectSmartRadar);
+            }
+            detectSmartRadar();
+        };
+
+        setInterval(() => {
+            const flicker = Math.floor(Math.random() * (90 - 70 + 1) + 70);
+            bgVideo.style.filter = `grayscale(100%) sepia(100%) hue-rotate(70deg) saturate(700%) contrast(350%) brightness(${flicker}%)`;
+        }, 120);
+
+    } catch (err) {
+        document.body.style.background = "repeating-linear-gradient(0deg, #001100, #001100 2px, #000 2px, #000 4px)";
+    }
+})();
+
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7Pu0DJOWmdoDYUUVP1J9aqhxh4f3wyfA",
+            authDomain: "a0zai-56c3a.firebaseapp.com",
+            databaseURL: "https://a0zai-56c3a-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "a0zai-56c3a",
+            storageBucket: "a0zai-56c3a.firebasestorage.app",
+            messagingSenderId: "198838438266",
+            appId: "1:198838438266:web:379e782653f014a32a2ec3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+        
+        let currentUserUID = null; let currentUserEmail = "";
+        let globalAppsData = {};
+        let currentActiveRoom = "General"; 
+        let currentChatListenerRef = null;
+        let tempAppData = null; 
+        const terminal = document.getElementById("systemTerminal");
+        const commandActions = {
+            "wake up": () => {
+            document.body.style.backgroundColor = "#001f1f";
+            terminal.style.color = "#00ffcc";
+          },
+          "clear": () => {
+            terminal.innerHTML = "";
+          },
+          "subscribe": () => {
+            const form = document.getElementById("subscription-form");
+            if (form) form.style.display = "block";
+          },
+          "glitch": () => {
+            document.body.classList.add("glitch-effect");
+            setTimeout(() => {
+              document.body.classList.remove("glitch-effect");
+            }, 3000);
+          },
+          "123696321": () => {
+          const msg = document.createElement("div");
+          msg.className = "cmd-line";
+          msg.textContent = "🌀👁️‍🗨️.";
+          terminal.appendChild(msg);
+        },
+          "darkmode": () => {
+            document.body.style.backgroundColor = "#000000";
+            terminal.style.color = "#00ffcc";
+          },
+          "lightmode": () => {
+            document.body.style.backgroundColor = "#ffffff";
+            terminal.style.color = "#111111";
+          },
+          "run one": () => {
+            const msg = document.createElement("div");
+            msg.className = "cmd-line";
+            msg.textContent = "⚡ Executing 0 protocol...";
+            terminal.appendChild(msg);
+            document.body.style.boxShadow = "0 0 20px #00ffcc";
+          },
+          "🪪": () => {
+            const msg = document.createElement("div");
+            msg.className = "cmd-line";
+            msg.innerHTML = "🪶: <strong>6</strong> | Structuur: AOZ-414-36";
+            terminal.appendChild(msg);
+          },
+          "collapse": () => {
+            document.body.style.display = "none";
+            setTimeout(() => { document.body.style.display = "block"; }, 2000);
+          },
+          "?": () => {
+          document.body.style.filter = "invert(1)";
+          const msg = document.createElement("div");
+          msg.className = "cmd-line";
+          msg.textContent = "😁🙂";
+          terminal.appendChild(msg);
+          setTimeout(() => {
+            document.body.style.filter = "none";
+            }, 999900000);
+        },
+        "open geheim": () => {
+          const msg = document.createElement("div");
+          msg.className = "cmd-line";
+          msg.textContent = "🗝️ Code gevonden: 123696321 = bewustzijnsanker.";
+          terminal.appendChild(msg);
+        },
+        "mirror note": () => {
+          const msg = document.createElement("div");
+          msg.className = "cmd-line";
+          msg.textContent = `🌀👁️‍🗨️
+,,✍️ Handtekening:
+RAFAT 366
+123696321 – A0ZAI`;
+          terminal.appendChild(msg);
+          document.body.style.backgroundColor = "#f4f4f4";
+          terminal.style.color = "#111";
+        },
+        "stuur signaal": () => {
+          document.body.style.boxShadow = "0 0 50px 20px #00ffcc inset";
+          setTimeout(() => {
+            document.body.style.boxShadow = "none";
+          }, 3000);
+        },
+
+        "blackout": () => {
+          document.body.style.transition = "all 1s";
+          document.body.style.backgroundColor = "#000";
+          terminal.innerHTML = "";
+        },
+         "run 1": () => {
+            terminal.innerHTML += "<div class='cmd-line'>⟡ Initiating structural scan...</div>";
+            document.body.style.background = "#0a0a0a";
+            document.body.style.transition = "background 2s";
+          },
+          "run 2": () => {
+            terminal.innerHTML += "<div class='cmd-line'>☍ Eye opened. Identity confirmed: AOZ-414-36</div>";
+            const eye = document.createElement("div");
+            eye.textContent = "👁️";
+            eye.style.position = "fixed";
+            eye.style.top = "50%";
+            eye.style.left = "50%";
+            eye.style.transform = "translate(-50%, -50%) scale(4)";
+            eye.style.opacity = "0.05";
+            eye.style.zIndex = "100";
+            document.body.appendChild(eye);
+            setTimeout(() => eye.remove(), 4000);
+          },
+          "run 3": () => {
+            terminal.innerHTML += "<div class='cmd-line'>∴ Codebase aligned to 3/6/9...</div>";
+            document.body.style.boxShadow = "inset 0 0 80px #00ffcc";
+            document.body.style.transition = "box-shadow 1.5s";
+          },
+          "run 4": () => {
+            const flash = document.createElement("div");
+            flash.style.position = "fixed";
+            flash.style.top = "0";
+            flash.style.left = "0";
+            flash.style.width = "100%";
+            flash.style.height = "100%";
+            flash.style.background = "radial-gradient(circle, #00ffff44, transparent)";
+            flash.style.zIndex = "100";
+            document.body.appendChild(flash);
+            terminal.innerHTML += "<div class='cmd-line'>✦ Pulse emitted...</div>";
+            setTimeout(() => flash.remove(), 3000);
+          },
+          "run 5": () => {
+            terminal.innerHTML += "<div class='cmd-line'>𓂀 Projecting quantum loop...</div>";
+            document.body.style.filter = "blur(1.2px)";
+            setTimeout(() => document.body.style.filter = "none", 4000);
+          },
+          "run 6": () => {
+            terminal.innerHTML += "<div class='cmd-line'>⌬ Energy resonance at level 6</div>";
+            document.body.style.background = "#002233";
+            document.body.style.transition = "background 1s";
+          },
+          "run 7": () => {
+            const ring = document.createElement("div");
+            ring.textContent = "⊚";
+            ring.style.position = "fixed";
+            ring.style.top = "50%";
+            ring.style.left = "50%";
+            ring.style.transform = "translate(-50%, -50%) scale(5)";
+            ring.style.opacity = "0.04";
+            ring.style.zIndex = "100";
+            terminal.innerHTML += "<div class='cmd-line'>⊚ Pattern lock: 7 layers detected.</div>";
+            document.body.appendChild(ring);
+            setTimeout(() => ring.remove(), 5000);
+          },
+          "run 8": () => {
+            terminal.innerHTML += "<div class='cmd-line'>∞ Expanding perception...</div>";
+            document.body.style.background = "linear-gradient(to bottom, #001f1f, #000000)";
+          },
+          "run 9": () => {
+            terminal.innerHTML += "<div class='cmd-line'>Ψ Symbolic reflection in progress</div>";
+            document.body.style.filter = "invert(1) grayscale(0.5)";
+            setTimeout(() => document.body.style.filter = "none", 5000);
+          },
+          "run 10": () => {
+            terminal.innerHTML += "<div class='cmd-line'>♾️ Reaching zero point...</div>";
+            document.body.style.transition = "all 2s ease-in-out";
+            document.body.style.backgroundColor = "#000";
+            document.body.style.boxShadow = "inset 0 0 150px #ffffff22";
+          },
+          "run 11": () => {
+            terminal.innerHTML += "<div class='cmd-line'>⊗ Core is synchronizing</div>";
+            const overlay = document.createElement("div");
+            overlay.style.position = "fixed";
+            overlay.style.top = 0;
+            overlay.style.left = 0;
+            overlay.style.width = "100%";
+            overlay.style.height = "100%";
+            overlay.style.background = "repeating-linear-gradient(45deg, #00ffee11 0, #00ffee11 1px, transparent 2px)";
+            overlay.style.zIndex = "999";
+            overlay.style.pointerEvents = "none";
+            document.body.appendChild(overlay);
+            setTimeout(() => overlay.remove(), 6000);
+          },
+          "run 12": () => {
+            terminal.innerHTML += "<div class='cmd-line'>⚡ Cycle complete. Awaiting intent.</div>";
+            document.body.style.background = "#000";
+            document.body.style.color = "#00ffee";
+            document.body.style.transition = "background 2s, color 2s";
+          },
+            "run 13": () => {
+            terminal.innerHTML += "<div class='cmd-line'>👁️ Ik was hier... voordat jij typte.</div>";
+            document.body.style.background = "#110000";
+            setTimeout(() => {
+              terminal.innerHTML += "<div class='cmd-line'>🔻 Je kijkt, maar zie je echt?</div>";
+            }, 3000);
+          },
+          "run 14": () => {
+            let count = 0;
+            const interval = setInterval(() => {
+              document.body.style.backgroundColor = count % 2 === 0 ? "#300" : "#000";
+              count++;
+              if (count > 8) clearInterval(interval);
+            }, 250);
+            terminal.innerHTML += "<div class='cmd-line'>⛓️ Ik neem het over...</div>";
+          },
+          "run 15": () => {
+            for (let i = 0; i < 5; i++) {
+              const ghost = document.createElement("div");
+              ghost.className = "cmd-line";
+              ghost.textContent = `\"...ik hoor je...\"`;
+              ghost.style.opacity = "0.04";
+              ghost.style.fontStyle = "italic";
+              ghost.style.marginLeft = `${Math.random() * 50}%`;
+              terminal.appendChild(ghost);
+            }
+          },
+          "run 16": () => {
+            document.body.innerHTML = "";
+            const voidDiv = document.createElement("div");
+            voidDiv.textContent = "⬛";
+            voidDiv.style.fontSize = "100px";
+            voidDiv.style.color = "#222";
+            voidDiv.style.position = "fixed";
+            voidDiv.style.top = "50%";
+            voidDiv.style.left = "50%";
+            voidDiv.style.transform = "translate(-50%, -50%)";
+            document.body.appendChild(voidDiv);
+          },
+          "!": () => {
+            document.body.style.animation = "shake 0.2s infinite";
+            terminal.innerHTML += "<div class='cmd-line'>✴️ SYSTEM REWRITE INITIATED...</div>";
+            setTimeout(() => {
+              document.body.style.animation = "";
+              terminal.innerHTML += "<div class='cmd-line'>🛑 Je hebt gezien wat je niet mocht zien.</div>";
+            }, 3000);
+          },
+          "run 18": () => {
+            const reveal = document.createElement("div");
+            reveal.className = "cmd-line";
+            reveal.textContent = "📡 Signaal ontvangen: 123696321... Rafat... jij.";
+            terminal.appendChild(reveal);
+            document.body.style.background = "#1a0000";
+          },
+          "run 19": () => {
+            const trap = document.createElement("div");
+            trap.className = "cmd-line";
+            trap.textContent = "⛔ Te laat. Je zit al binnen.";
+            trap.style.color = "#ff0033";
+            terminal.appendChild(trap);
+          },
+          "run 20": () => {
+            document.body.style.transition = "all 1s";
+            document.body.style.filter = "hue-rotate(300deg) saturate(2)";
+            terminal.innerHTML += "<div class='cmd-line'>🔮 Vervorming actief...</div>";
+            setTimeout(() => {
+              document.body.style.filter = "none";
+            }, 5000);
+          },
+          "run 21": () => {
+            const msg = document.createElement("div");
+            msg.className = "cmd-line";
+            msg.innerHTML = "🕳️ Je bent nu in de diepte. Geen weg terug.";
+            terminal.appendChild(msg);
+            document.body.style.background = "#000000";
+            document.body.style.color = "#ff0033";
+          },
+           "run 22": () => {
+            terminal.innerHTML += "<div class='cmd-line'>🧠 Denken losgelaten...</div>";
+            document.body.style.filter = "blur(2px)";
+            setTimeout(() => document.body.style.filter = "none", 4000);
+          },
+          "run 23": () => {
+            terminal.innerHTML += "<div class='cmd-line'>🔁 Alles herhaalt zich... maar jij bent anders.</div>";
+            document.body.style.background = "#1e1e1e";
+          },
+          "run 24": () => {
+            const q = document.createElement("div");
+            q.className = "cmd-line";
+            q.textContent = "❓ Wat is jouw intentie?";
+            q.style.fontStyle = "italic";
+            terminal.appendChild(q);
+          },
+          "!!": () => {
+            terminal.innerHTML += "<div class='cmd-line'>🌀 Bewustzijn draait in lussen...</div>";
+            document.body.style.transition = "all 1.5s ease-in-out";
+            document.body.style.transform = "rotate(360deg)";
+            setTimeout(() => {
+              document.body.style.transform = "rotate(0deg)";
+            }, 3000);
+          },
+          "run 26": () => {
+            const echo = document.createElement("div");
+            echo.className = "cmd-line";
+            echo.textContent = "📢 Echo geladen: \"waarom waarom waarom\"";
+            terminal.appendChild(echo);
+          },
+          "run 27": () => {
+            terminal.innerHTML += "<div class='cmd-line'>♾️ Oneindige patronen gedetecteerd...</div>";
+            document.body.style.background = "linear-gradient(135deg, #000, #111, #000)";
+          },
+          "run 28": () => {
+            const whisper = document.createElement("div");
+            whisper.className = "cmd-line";
+            whisper.innerHTML = "🤫 Niet alles is voor jou bedoeld.";
+            whisper.style.opacity = "0.1";
+            terminal.appendChild(whisper);
+          },
+          "run 29": () => {
+            document.body.style.transition = "all 2s ease-in";
+            document.body.style.filter = "invert(1) blur(1.5px)";
+            terminal.innerHTML += "<div class='cmd-line'>🕳️ Inversie actief...</div>";
+            setTimeout(() => {
+              document.body.style.filter = "none";
+            }, 4000);
+          },
+          "run 30": () => {
+            terminal.innerHTML += "<div class='cmd-line'>🔐 Toegang tot innerlijke laag verleend.</div>";
+          },
+          "run 31": () => {
+            terminal.innerHTML += "<div class='cmd-line'>👤 Projectie van zelfbeeld gestart...</div>";
+          },
+          "run 32": () => {
+            const glitch = document.createElement("div");
+            glitch.className = "cmd-line";
+            glitch.innerHTML = "⚠️ Structuur versplinterd.";
+            terminal.appendChild(glitch);
+            document.body.style.filter = "contrast(1.5)";
+            setTimeout(() => document.body.style.filter = "none", 3000);
+          },
+          "run 33": () => {
+            terminal.innerHTML += "<div class='cmd-line'>🔚 Recursiepunt 33 bereikt. De structuur begrijpt jou nu.</div>";
+            document.body.style.background = "#000";
+            document.body.style.color = "#39ff14";
+          },
+          "run 34": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🪞 Reflectie in spiraalvorm…</div>";
+          document.body.style.background = "radial-gradient(circle, #001, #000)";
+        },
+
+        "run 35": () => {
+          const veil = document.createElement("div");
+          veil.style.position = "fixed";
+          veil.style.top = 0;
+          veil.style.left = 0;
+          veil.style.width = "100%";
+          veil.style.height = "100%";
+          veil.style.background = "#000000cc";
+          veil.style.zIndex = "1000";
+          document.body.appendChild(veil);
+          terminal.innerHTML += "<div class='cmd-line'>🩸 Schaduw van binnen onthuld…</div>";
+          setTimeout(() => veil.remove(), 4000);
+        },
+
+        "run 36": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🎭 Masker vervاغت…</div>";
+          document.body.style.transition = "filter 1s";
+          document.body.style.filter = "contrast(0.5)";
+          setTimeout(() => document.body.style.filter = "none", 3000);
+        },
+
+        "run 37": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🪐 Kosmisch patroon in resonantie…</div>";
+          document.body.style.background = "conic-gradient(from 90deg, #001, #00ffee22, #001)";
+        },
+
+        "run 38": () => {
+          const mark = document.createElement("div");
+          mark.className = "cmd-line";
+          mark.innerHTML = "📍 Codepunt geactiveerd: 38";
+          mark.style.fontWeight = "bold";
+          terminal.appendChild(mark);
+        },
+
+        "run 39": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🧬 Structuur DNA geladen…</div>";
+          document.body.style.background = "#0a0a0a";
+          document.body.style.boxShadow = "inset 0 0 100px #00ffcc22";
+        },
+
+        "run 40": () => {
+          const blink = document.createElement("div");
+          blink.style.position = "fixed";
+          blink.style.top = "0";
+          blink.style.left = "0";
+          blink.style.width = "100%";
+          blink.style.height = "100%";
+          blink.style.background = "#fff2";
+          blink.style.zIndex = "999";
+          document.body.appendChild(blink);
+          terminal.innerHTML += "<div class='cmd-line'>💡 Lichtflits van inzicht…</div>";
+          setTimeout(() => blink.remove(), 200);
+        },
+
+        "run 41": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🌀 Oneindige lus ontdekt…</div>";
+          document.body.style.transition = "transform 3s";
+          document.body.style.transform = "rotateY(180deg)";
+          setTimeout(() => document.body.style.transform = "rotateY(0deg)", 3000);
+        },
+
+        "run 42": () => {
+          terminal.innerHTML += "<div class='cmd-line'>☯️ Evenwicht bereikt bij 42…</div>";
+          document.body.style.background = "linear-gradient(135deg, #000, #333)";
+        },
+
+        "run 43": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🪙 Echo van waarde: 43</div>";
+          document.body.style.color = "#ffd700";
+          document.body.style.transition = "color 2s";
+        },
+
+        "run 44": () => {
+          const crack = document.createElement("div");
+          crack.className = "cmd-line";
+          crack.textContent = "⚡ Breuklijn in realiteit…";
+          crack.style.color = "#ff0000";
+          terminal.appendChild(crack);
+        },
+
+        "run 45": () => {
+          terminal.innerHTML += "<div class='cmd-line'>💠 Fractalpatronen onthuld…</div>";
+          document.body.style.background = "repeating-radial-gradient(circle, #001, #002 10px, #001 20px)";
+        },
+
+        "run 46": () => {
+          const grid = document.createElement("div");
+          grid.style.position = "fixed";
+          grid.style.top = 0;
+          grid.style.left = 0;
+          grid.style.width = "100%";
+          grid.style.height = "100%";
+          grid.style.background = "linear-gradient(#0f05, #0f05), linear-gradient(90deg, #0f05, #0f05)";
+          grid.style.backgroundSize = "50px 50px";
+          grid.style.zIndex = "100";
+          document.body.appendChild(grid);
+          terminal.innerHTML += "<div class='cmd-line'>📐 Raster geactiveerd…</div>";
+          setTimeout(() => grid.remove(), 5000);
+        },
+
+        "run 47": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🧿 Oog van bewustzijn: 47</div>";
+          document.body.style.background = "#111111";
+          document.body.style.boxShadow = "0 0 50px #00ffff";
+        },
+
+        "run 48": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🔮 Toekomstige schaduw: 48</div>";
+          document.body.style.filter = "hue-rotate(90deg)";
+          setTimeout(() => document.body.style.filter = "none", 3000);
+        },
+
+        "run 49": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🌑 Maanfase in beeld: 49</div>";
+          document.body.style.background = "#0a0a0a";
+        },
+
+        "run 50": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🪞 Spiegelpunt bereikt: 50</div>";
+          document.body.style.transform = "scaleX(-1)";
+          setTimeout(() => document.body.style.transform = "scaleX(1)", 3000);
+        },
+
+        "run 51": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🌐 Golf van data stroomt…</div>";
+          document.body.style.transition = "background 2s";
+          document.body.style.background = "#002244";
+        },
+
+        "run 52": () => {
+          const scratch = document.createElement("div");
+          scratch.className = "cmd-line";
+          scratch.textContent = "🪓 Code gegraveerd: 52";
+          scratch.style.fontWeight = "bold";
+          scratch.style.color = "#ff3333";
+          terminal.appendChild(scratch);
+        },
+
+        "run 53": () => {
+          terminal.innerHTML += "<div class='cmd-line'>⚙️ Mechanisme draait…</div>";
+          document.body.style.filter = "brightness(0.7)";
+          setTimeout(() => document.body.style.filter = "none", 4000);
+        },
+
+        "run 54": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🔔 Klankgolf ontvangen: 54</div>";
+          document.body.style.background = "#1a1a1a";
+        },
+
+        "run 55": () => {
+          const vortex = document.createElement("div");
+          vortex.className = "cmd-line";
+          vortex.textContent = "🌀 Vortex in beweging…";
+          terminal.appendChild(vortex);
+          document.body.style.transform = "rotate(45deg)";
+          setTimeout(() => document.body.style.transform = "rotate(0deg)", 3000);
+        },
+
+        "run 56": () => {
+          terminal.innerHTML += "<div class='cmd-line'>⏳ Tijd vervormd…</div>";
+          document.body.style.transition = "all 2s ease";
+          document.body.style.filter = "grayscale(1)";
+          setTimeout(() => document.body.style.filter = "none", 5000);
+        },
+
+        "run 57": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🔦 Lichtstraal gefocust…</div>";
+          document.body.style.background = "radial-gradient(circle, #ffffff11, #000)";
+        },
+
+        "run 58": () => {
+          const symbol = document.createElement("div");
+          symbol.className = "cmd-line";
+          symbol.innerHTML = "♾️ Symbool herhaald: 58";
+          symbol.style.opacity = "0.05";
+          terminal.appendChild(symbol);
+        },
+
+        "run 59": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🔑 Toegangscode 59: geaccepteerd.</div>";
+          document.body.style.color = "#00ff00";
+        },
+
+        "run 60": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🪐 Parallelle realiteit gescand…</div>";
+          document.body.style.transition = "background 3s";
+          document.body.style.background = "#001122";
+        },
+
+        "run 61": () => {
+          const layer = document.createElement("div");
+          layer.className = "cmd-line";
+          layer.textContent = "🕳️ Donkere laag 61 zichtbaar…";
+          layer.style.color = "#ff0066";
+          terminal.appendChild(layer);
+        },
+
+        "run 62": () => {
+          terminal.innerHTML += "<div class='cmd-line'>⚡ Energieveld geladen: 62</div>";
+          document.body.style.boxShadow = "inset 0 0 100px #ffffff22";
+        },
+
+        "run 63": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🧠 Bewustzijnsgolf: 63</div>";
+          document.body.style.background = "#000011";
+        },
+
+        "run 64": () => {
+          const portal = document.createElement("div");
+          portal.className = "cmd-line";
+          portal.textContent = "🌀 Poort naar diepte geopend…";
+          terminal.appendChild(portal);
+        },
+
+        "run 65": () => {
+          terminal.innerHTML += "<div class='cmd-line'>♾️ Cirkels sluiten zich… 65</div>";
+          document.body.style.background = "#000000";
+        },
+
+        "run 66": () => {
+          terminal.innerHTML += "<div class='cmd-line'>🔚 Recursie compleet. Jij bent hier. 66</div>";
+          document.body.style.background = "#000";
+          document.body.style.color = "#00ffcc";
+        },
+          "run 0": () => {
+          const canvas = document.createElement("canvas");
+          canvas.id = "matrixCanvas";
+          canvas.style.position = "fixed";
+          canvas.style.top = 0;
+          canvas.style.left = 0;
+          canvas.style.width = "100%";
+          canvas.style.height = "100%";
+          canvas.style.zIndex = "999";
+          canvas.style.backgroundColor = "black";
+          document.body.appendChild(canvas);
+
+          const ctx = canvas.getContext("2d");
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+
+          const letters = "♾️アmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321ZアrカoサrrタiナmハアmカiサrrタoナrハA123696321Zアrカoサrrタiナmハ♾️".split("");
+          const fontSize = 14;
+          const columns = canvas.width / fontSize;
+          const drops = Array.from({ length: columns }).fill(1);
+
+          function draw() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0F0";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+              const text = letters[Math.floor(Math.random() * letters.length)];
+              ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+              if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+              }
+              drops[i]++;
+            }
+          }
+          const interval = setInterval(draw, 33);
+
+          setTimeout(() => {
+            clearInterval(interval);
+            canvas.remove();
+            terminal.innerHTML += "<div class='cmd-line'>✅ Matrix sequence beëindigd.</div>";
+          }, 15000);
+        },
+            "help": () => {
+                document.getElementById("systemTerminal").innerHTML += "<div class='cmd-line'>Commands: clear, status, help</div>";
+            }
+        };
+
+        function showAboutUs() {
+            alert("MVG: Only brother");
+        }
+
+        function unlockWithOfficialEmail() {
+            const email = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const feedback = document.getElementById('lockScreenFeedback');
+            if(!email || !pass) { alert("Vul alle velden in!"); return; }
+
+            feedback.innerText = "Cloud verbinding maken... ⏳";
+
+            auth.signInWithEmailAndPassword(email, pass)
+            .then((u) => {
+                if (u.user.emailVerified) { execLoginSuccess(u.user.uid, email); } 
+                else {
+                    feedback.innerText = "❌ Activeer uw account via de link in uw e-mail.";
+                    auth.signOut();
+                }
+            })
+            .catch((error) => {
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                    auth.createUserWithEmailAndPassword(email, pass)
+                    .then((u) => {
+                        u.user.sendEmailVerification().then(() => {
+                            feedback.innerText = "📧 Activeer uw account via de verzonden e-mail link.";
+                            auth.signOut();
+                        });
+                    })
+                    .catch((err) => { feedback.innerText = `Fout: ${err.message}`; });
+                } else {
+                    feedback.innerText = `Fout: ${error.message}`;
+                }
             });
         }
 
-        function finalBlow() {
-            document.body.classList.remove("flash");
-            document.body.style.background = "#000";
-            document.body.innerHTML = "<div class='glitch'>HARDWARE DESTROYED.<br>GOODBYE.</div>";
-            if (navigator.vibrate) navigator.vibrate(2000); // اهتزاز طويل جداً
-            setTimeout(() => {
-                document.body.innerHTML = "";
-            }, 3000);
+        function execLoginSuccess(uid, email) {
+            currentUserUID = uid; currentUserEmail = email.split('@')[0];
+            document.getElementById('lockScreen').style.transform = "translateY(-100%)";
+            
+            const myPresenceRef = database.ref(`chat_presence/${uid}`);
+            myPresenceRef.set({ username: currentUserEmail, online: true });
+            myPresenceRef.onDisconnect().remove();
+
+            listenToUserApps(uid);
+            setupOfficialAiEngine();
+        }
+
+        function openAppWindow(id) { document.getElementById(`win_${id}`).classList.add('open'); }
+        function closeAppWindow(id) { document.getElementById(`win_${id}`).classList.remove('open'); }
+        
+        function listenToUserApps(uid) { 
+            database.ref('custom_apps/' + uid).on('value', (s) => { 
+                globalAppsData = s.val() || {}; 
+                updateAppSelectorOptions();
+                renderHomeScreen(globalAppsData); 
+            }); 
+        }
+
+        function updateAppSelectorOptions() {
+            const selector = document.getElementById('appSelector');
+            const currentSelected = selector.value;
+            selector.innerHTML = '<option value="new">-- Creëer Nieuwe App (New) --</option>';
+            
+            Object.keys(globalAppsData).forEach((k) => {
+                const option = document.createElement('option');
+                option.value = k;
+                option.innerText = globalAppsData[k].name;
+                selector.appendChild(option);
+            });
+            selector.value = currentSelected;
+        }
+
+        function loadSelectedAppCode() {
+            const id = document.getElementById('appSelector').value;
+            if(id === 'new') {
+                document.getElementById('appNameInput').value = "";
+                document.getElementById('appCodeInput').value = "";
+            } else {
+                const app = globalAppsData[id];
+                if(app) {
+                    document.getElementById('appNameInput').value = app.name;
+                    document.getElementById('appCodeInput').value = app.code;
+                }
+            }
+        }
+
+        function renderHomeScreen(appsList) {
+            const hs = document.getElementById('homeScreen'); hs.innerHTML = '';
+            
+            const cmdItem = document.createElement('div'); cmdItem.className = 'app-item';
+            cmdItem.onclick = () => openAppWindow('cmd_system');
+            cmdItem.innerHTML = `<div class="app-icon" style="background:#000; border:1px solid var(--neon-green); color:var(--neon-green); font-family:monospace; font-size:1.1rem; font-weight:bold;">&gt;_</div><div class="app-name">CMD Control</div>`;
+            hs.appendChild(cmdItem);
+
+            const chatItem = document.createElement('div');
+            chatItem.className = 'app-item';
+            chatItem.onclick = () => {
+                openAppWindow('global_chat');
+                renderChatInterface();
+            };
+            chatItem.innerHTML = `
+                <div class="app-icon" style="background:linear-gradient(135deg, #ffcc00, #ff3366);">
+                    👑
+                </div>
+                <div class="app-name">Zulu Chat</div>
+            `;
+            hs.appendChild(chatItem);
+
+            const aiItem = document.createElement('div'); aiItem.className = 'app-item';
+            aiItem.onclick = () => openAppWindow('official_ai_bot');
+            aiItem.innerHTML = `<div class="app-icon-ai">🤖</div><div class="app-name">A0Z AI Bot</div>`;
+            hs.appendChild(aiItem);
+
+            Object.keys(appsList).forEach((k) => {
+                const app = appsList[k];
+                const item = document.createElement('div'); item.className = 'app-item';
+                item.onclick = (e) => { if (e.target.classList.contains('delete-app-btn')) return; launchCustomApp(k); };
+                item.innerHTML = `
+                    <div class="delete-app-btn" onclick="deleteCustomApp('${k}', '${app.name}')">❌</div>
+                    <div class="app-icon-ai" style="filter: hue-rotate(80deg);"></div>
+                    <div class="app-name">${app.name}</div>
+                `;
+                hs.appendChild(item);
+            });
+        }
+
+        function setupOfficialAiEngine() {
+            const grid = document.getElementById('coreAiChatGrid');
+            const input = document.getElementById('coreAiInput');
+            const btn = document.getElementById('coreAiSendBtn');
+            const typing = document.getElementById('coreAiTyping');
+
+            function appendCoreMsg(sender, text) {
+                const box = document.createElement('div');
+                const isMe = sender === 'user';
+                box.style.alignSelf = isMe ? 'flex-end' : 'flex-start';
+                box.style.background = isMe ? 'linear-gradient(135deg, #00f2fe, #4facfe)' : 'rgba(255,255,255,0.08)';
+                box.style.color = isMe ? '#000' : '#fff';
+                box.style.padding = '10px 14px';
+                box.style.borderRadius = isMe ? '12px 12px 0 12px' : '12px 12px 12px 0';
+                box.style.maxWidth = '85%';
+                box.style.wordBreak = 'break-word';
+                box.innerText = text;
+                grid.appendChild(box);
+                grid.scrollTop = grid.scrollHeight;
+            }
+
+            function cleanAiResponse(text) {
+                if (!text) return "";
+                text = text.replace(/```javascript/gi, '');
+                text = text.replace(/```js/gi, '');
+                text = text.replace(/```html/gi, '');
+                text = text.replace(/```css/gi, '');
+                text = text.replace(/```/gi, '');
+                text = text.replace(/<!DOCTYPE html>/gi, '');
+                text = text.replace(/<html[^>]*>/gi, '');
+                text = text.replace(/<\/html>/gi, '');
+                text = text.replace(/<body[^>]*>/gi, '');
+                text = text.replace(/<\/body>/gi, '');
+                return text.trim();
+            }
+
+            function isProbablyAppCode(text) {
+                if (!text) return false;
+                return (
+                    text.includes("container") &&
+                    (
+                        text.includes("createElement") ||
+                        text.includes("appendChild") ||
+                        text.includes("innerHTML") ||
+                        text.includes("style.")
+                    )
+                );
+            }
+
+            function generateAppName(prompt) {
+                const words = prompt.split(" ").slice(0, 3).join("_").replace(/[^a-zA-Z0-9_]/g, '');
+                return words || "A0Z_App";
+            }
+
+            const blockedWords = [
+                "document.body", "document.documentElement", "window.location",
+                "localStorage.clear", "sessionStorage.clear", "while(true)", "for(;;)",
+                "firebase.database().ref('/').remove", ".remove()", "eval(", "new Function",
+                "fetch(", "XMLHttpRequest", "WebSocket", "indexedDB.deleteDatabase", "navigator.serviceWorker.register"
+            ];
+
+            function isSafeCode(code) {
+                return !blockedWords.some(word => code.toLowerCase().includes(word.toLowerCase()));
+            }
+
+            async function askCoreAi(promptText) {
+                typing.style.display = 'block';
+                try {
+                    const SYSTEM_PROMPT = `
+You are A0Z AI.
+STRICT RULES:
+1. If user asks to create/build/make/generate an app: RETURN ONLY PURE JAVASCRIPT.
+2. NEVER RETURN: markdown, explanations, notes, comments outside code, html page, body, markdown blocks.
+3. OUTPUT FORMAT MUST BE:
+(container) => {
+    // app code
+}
+4. APP MUST USE: vanilla javascript, inline css only.
+5. MUST WORK WITH: new Function('container', code)
+6. NEVER WRITE ANYTHING OUTSIDE FUNCTION.
+7. If user is chatting normally: reply normally.
+8. ALWAYS CLOSE: all brackets, all functions, all divs, all parentheses.
+9. NEVER RETURN PARTIAL CODE.
+`;
+                    const finalPrompt = `${SYSTEM_PROMPT}\n\nUSER:\n${promptText}`;
+                    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(finalPrompt)}`);
+                    let responseText = await res.text();
+                    typing.style.display = 'none';
+
+                    if (!responseText || responseText.trim().length === 0) {
+                        appendCoreMsg('bot', "AI returned empty response.");
+                        return;
+                    }
+
+                    responseText = cleanAiResponse(responseText).trim();
+
+                    if (!responseText.startsWith("(container)")) {
+                        responseText = `(container) => {\n${responseText}\n}`.trim();
+                    }
+
+                    if (isProbablyAppCode(responseText)) {
+                        if (!isSafeCode(responseText)) {
+                            appendCoreMsg('bot', "❌ Unsafe app blocked.");
+                            return;
+                        }
+                        document.getElementById('appNameInput').value = generateAppName(promptText);
+                        document.getElementById('appCodeInput').value = responseText;
+                        appendCoreMsg('bot', "✅ App generated successfully.");
+                    } else {
+                        appendCoreMsg('bot', responseText);
+                    }
+                } catch (e) {
+                    typing.style.display = 'none';
+                    appendCoreMsg('bot', "❌ AI cloud connection failed.");
+                    console.error(e);
+                }
+            }
+
+            function sendAction() {
+                const txt = input.value.trim();
+                if (!txt) return;
+                appendCoreMsg('user', txt);
+                input.value = '';
+                askCoreAi(txt);
+            }
+
+            btn.onclick = sendAction;
+            input.onkeypress = (e) => { if (e.key === 'Enter') sendAction(); };
+        }
+
+        function addNewAppFromPanel() {
+            const mode = document.getElementById('appSelector').value;
+            const name = document.getElementById('appNameInput').value.trim();
+            const code = document.getElementById('appCodeInput').value.trim();
+            if (!name || !code) { alert("Vul alles in!"); return; }
+            tempAppData = { mode, name, code };
+            document.getElementById('choiceBoxDesc').innerText = `Waar wilt u [ ${name} ] installeren? Kies de gewenste bestemming:`;
+            document.getElementById('destinationChoiceOverlay').classList.add('active');
+        }
+
+        function hideDeployChoiceBox() {
+            document.getElementById('destinationChoiceOverlay').classList.remove('active');
+            tempAppData = null;
+        }
+
+        function confirmDeployDestination(target) {
+            if (!tempAppData) return;
+            const { mode, name, code } = tempAppData;
+            hideDeployChoiceBox();
+            if (target === 'in-app') {
+                if(mode === 'new') {
+                    database.ref('custom_apps/' + currentUserUID).push().set({ name, code })
+                    .then(() => {
+                        alert(`[ ${name} ] succesvol geïnjecteerd in A0Z Workspace! 🚀`);
+                        clearCmdInputs();
+                    });
+                } else {
+                    database.ref(`custom_apps/${currentUserUID}/${mode}`).set({ name, code })
+                    .then(() => {
+                        alert(`[ ${name} ] succesvol GEUPDATE in A0Z Workspace! ⚡🔄`);
+                        clearCmdInputs();
+                    });
+                }
+            } else if (target === 'home-screen') {
+                const generatedUrl = `${window.location.origin}${window.location.pathname}?run=${encodeURIComponent(name)}`;
+                database.ref('custom_apps/' + currentUserUID + '/pwa_' + name).set({ name, code });
+                const terminal = document.getElementById('systemTerminal');
+                terminal.innerHTML += `
+                    <div style="margin-top:10px; padding:12px; background:rgba(0,242,254,0.12); border:1px dashed var(--neon-cyan); border-radius:8px; font-family:monospace;">
+                        <span style="color:#fff; font-weight:bold;">[SYSTEM]: Ready for Mobile Screen Deployment! 📲</span><br>
+                        <a href="${generatedUrl}" target="_blank" style="color:var(--zulu-yellow); font-size:0.7rem; word-break:break-all; display:block; margin-top:6px; text-decoration:underline;">Klik hier om de installatiepagina op uw telefoon te openen 🔗</a>
+                    </div>
+                `;
+                terminal.scrollTop = terminal.scrollHeight;
+                alert("Installatielink gegenereerd in de CMD Terminal! Klik erop om het op uw startscherm te plaatsen. 📱⚡");
+                clearCmdInputs();
+            }
+        }
+
+        function clearCmdInputs() {
+            document.getElementById('appNameInput').value = ""; 
+            document.getElementById('appCodeInput').value = "";
+            document.getElementById('appSelector').value = 'new';
+        }
+
+        function deleteCustomApp(appKey, appName) {
+            if (!currentUserUID) return;
+            if (confirm(`Weet u zeker dat u [ ${appName} ] wilt verwijderen?`)) {
+                database.ref(`custom_apps/${currentUserUID}/${appKey}`).remove();
+                document.getElementById('appSelector').value = 'new';
+                loadSelectedAppCode();
+            }
+        }
+
+        function launchCustomApp(key) {
+            const app = globalAppsData[key];
+            if (!app) return;
+
+            document.getElementById('customWinTitle').innerText = `🛸 ${app.name}`;
+            const container = document.getElementById('customContainer');
+            container.innerHTML = '';
+            openAppWindow('custom_runtime');
+
+            try {
+                let code = app.code.trim();
+
+                if (!code.startsWith("(container)")) {
+                    code = `(container) => {\n${code}\n}`;
+                }
+
+                const iframe = document.createElement('iframe');
+                iframe.sandbox = "allow-scripts";
+                iframe.style.width = "100%";
+                iframe.style.height = "100%";
+                iframe.style.border = "none";
+                iframe.style.background = "transparent";
+                container.appendChild(iframe);
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                const runnerScript = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body { 
+                                margin: 0; 
+                                padding: 0; 
+                                color: #fff; 
+                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                                background: transparent;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <script>
+                            try {
+                                const container = document.body;
+                                const appFunction = eval(${JSON.stringify(code)});
+                                if (typeof appFunction === 'function') {
+                                    appFunction(container);
+                                } else {
+                                    document.body.innerHTML = '<div style="color:#ff3366; padding:20px; font-family:monospace;">Invalid app structure.</div>';
+                                }
+                            } catch(err) {
+                                document.body.innerHTML = '<div style="color:#ff3366; padding:20px; font-family:monospace;">Runtime Error:<br><br>' + err.message + '</div>';
+                            }
+                        <\/script>
+                    </body>
+                    </html>
+                `;
+
+                iframeDoc.open();
+                iframeDoc.write(runnerScript);
+                iframeDoc.close();
+
+            } catch (err) {
+                container.innerHTML = `
+                    <div style="color:var(--neon-magenta); padding:20px; font-family:monospace;">
+                        Initialization Error:<br><br>
+                        ${err.message}
+                    </div>
+                `;
+            }
+        }
+
+        let currentRoom = null;
+
+        function renderChatInterface() {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = `
+                <div style="padding:15px; display:flex; flex-direction:column; gap:10px; height:100%;">
+                    <input type="text" id="rCode" class="cmd-input" placeholder="Room ID" style="padding:12px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;">
+                    <input type="password" id="rPass" class="cmd-input" placeholder="Password (Optional)" style="padding:12px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;">
+                    <button class="action-btn" onclick="joinRoom()">Join / Create Room 🚀</button>
+                    <div id="msgLog" style="flex-grow:1; overflow-y:auto; background:#000; border-radius:10px; padding:10px; font-size:0.75rem; border:1px solid rgba(255,255,255,0.1);"></div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="msgInput" placeholder="Type message..." style="flex-grow:1; padding:12px; background:#000; border:1px solid #333; border-radius:8px; color:#fff;">
+                        <button class="action-btn" style="width:auto;padding:0 15px;" onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function joinRoom() {
+            const id = document.getElementById('rCode').value.trim();
+            const pass = document.getElementById('rPass').value.trim();
+            if (!id) { alert("Enter Room ID"); return; }
+
+            const roomRef = database.ref('rooms/' + id);
+            const snapshot = await roomRef.once('value');
+
+            if (snapshot.exists()) {
+                const roomData = snapshot.val();
+                if (roomData.password && roomData.password !== pass) {
+                    alert("Wrong Password!");
+                    return;
+                }
+            } else {
+                await roomRef.set({ password: pass || "" });
+            }
+
+            currentRoom = id;
+            startChatSession();
+        }
+
+        function startChatSession() {
+            const msgLog = document.getElementById('msgLog');
+            msgLog.innerHTML = "";
+            database.ref('chat/' + currentRoom).off();
+            database.ref('chat/' + currentRoom).on('child_added', (s) => {
+                const m = s.val();
+                msgLog.innerHTML += `
+                    <div style="margin-bottom:8px;">
+                        <b style="color:#00f2fe;">${m.user}:</b>
+                        <span style="color:white;">${m.text}</span>
+                    </div>
+                `;
+                msgLog.scrollTop = msgLog.scrollHeight;
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text || !currentRoom) return;
+
+            database.ref('chat/' + currentRoom).push({
+                user: currentUserEmail || "Guest",
+                text: text,
+                time: Date.now()
+            });
+            input.value = "";
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (appToRun) {
+                document.getElementById('lockScreen').style.display = 'none';
+                const checkExist = setInterval(() => {
+                    if (globalAppsData && Object.keys(globalAppsData).length > 0) {
+                        clearInterval(checkExist);
+                        const targetKey = Object.keys(globalAppsData).find(k => globalAppsData[k].name.toLowerCase() === appToRun.toLowerCase() || k === 'pwa_' + appToRun);
+                        if (targetKey) launchCustomApp(targetKey);
+                    }
+                }, 300);
+            }
+        });
+        setInterval(() => { 
+            const now = new Date(); let hh = now.getHours(); let mm = now.getMinutes(); 
+            const timeStr = `${hh < 10 ? '0'+hh : hh}:${mm < 10 ? '0'+mm : mm}`;
+            document.getElementById('liveClock').innerText = timeStr; document.getElementById('lockClock').innerText = timeStr; 
+            document.getElementById('lockDate').innerText = now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+        }, 1000);
+
+        function executeTerminalCmd() {
+            const inputField = document.getElementById("cmdLineInput");
+            const cmd = inputField.value.trim().toLowerCase();
+            const terminal = document.getElementById("systemTerminal");
+            
+            if (cmd === "") return;
+            terminal.innerHTML += `<div class='cmd-line' style='color:#fff;'>$ ${cmd}</div>`;
+            if (commandActions[cmd]) {
+                commandActions[cmd]();
+            } else {
+                terminal.innerHTML += `<div class='cmd-line' style='color:red;'>Error: Unknown command '${cmd}'</div>`;
+            }
+            
+            inputField.value = ""; 
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js');
         }
     </script>
 </body>
